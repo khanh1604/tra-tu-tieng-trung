@@ -5,6 +5,7 @@
  * Thêm từ mới: chỉ cần thêm một dòng vào mảng này.
  */
 window.WORDS = [
+  { w: '福', py: 'fú', hv: 'phúc', loai: 'danh từ', nghia: 'phúc, phước lành, may mắn', vd: ['祝你幸福！', 'Zhù nǐ xìngfú!', 'Chúc bạn hạnh phúc!'] },
   { w: '你好', py: 'nǐ hǎo', hv: 'nhĩ hảo', loai: 'câu chào', nghia: 'xin chào', vd: ['你好，很高兴认识你。', 'Nǐ hǎo, hěn gāoxìng rènshi nǐ.', 'Xin chào, rất vui được làm quen với bạn.'] },
   { w: '谢谢', py: 'xièxie', hv: 'tạ tạ', loai: 'động từ', nghia: 'cảm ơn', vd: ['谢谢你的帮助。', 'Xièxie nǐ de bāngzhù.', 'Cảm ơn sự giúp đỡ của bạn.'] },
   { w: '再见', py: 'zàijiàn', hv: 'tái kiến', loai: 'câu chào', nghia: 'tạm biệt, hẹn gặp lại', vd: ['老师，再见！', 'Lǎoshī, zàijiàn!', 'Tạm biệt thầy/cô!'] },

@@ -95,6 +95,28 @@
     els.empty.hidden = items.length > 0;
   }
 
+  // Mục "Ý nghĩa Hán tự": tách từng chữ trong từ
+  function renderChars(w) {
+    const CHARS = window.CHARS || {};
+    const items = [...new Set(w)].filter((c) => CHARS[c]);
+    if (!items.length) return '';
+    return `<section class="hanzi">
+      <h3>Ý nghĩa Hán tự</h3>
+      ${items.map((c) => {
+        const d = CHARS[c];
+        return `<div class="hz">
+          <button class="hz-char han" data-act="char" data-c="${esc(c)}" title="Nghe chữ ${esc(c)}" lang="zh-CN">${esc(c)}</button>
+          <div class="hz-body">
+            <p class="hz-title"><span class="hz-hv">${esc(d.hv)}</span> · <span class="hz-py">${esc(d.py)}</span></p>
+            <p class="hz-mean">${esc(d.nghia)}</p>
+            <p class="hz-meta">Bộ: <span class="han">${esc(d.bo)}</span>${d.pt ? ` · Phồn thể: <span class="han pt">${esc(d.pt)}</span>` : ''}</p>
+            ${d.ct ? `<p class="hz-ct">${esc(d.ct)}</p>` : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </section>`;
+  }
+
   function renderDetail(x) {
     if (!x) { els.detail.hidden = true; els.detail.innerHTML = ''; return; }
     // Từ liên quan: có chung ít nhất một chữ
@@ -106,6 +128,7 @@
         <div class="actions">
           <button class="btn primary" data-act="say" title="Nghe đọc">🔊 Nghe</button>
           <button class="btn" data-act="slow" title="Đọc chậm">🐢 Chậm</button>
+          <button class="btn" data-act="write" title="Xem cách viết">✍️ Cách viết</button>
           <button class="btn" data-act="share" title="Chia sẻ link">🔗 Chia sẻ</button>
         </div>
       </div>
@@ -115,6 +138,8 @@
         <dt>Hán Việt</dt><dd>${esc(x.hv)}</dd>
         <dt>Từ loại</dt><dd>${esc(x.loai)}</dd>
       </dl>
+      ${renderChars(x.w)}
+      ${renderWriting(x.w)}
       <div class="example">
         <div class="ex-head"><strong>Ví dụ</strong>
           <button class="btn small" data-act="ex" title="Nghe câu ví dụ">🔊</button></div>
@@ -128,13 +153,98 @@
       <div class="sharelink"><input readonly value="${esc(decodeURIComponent(linkFor(x.w)))}" aria-label="Link của từ"></div>`;
     els.detail.hidden = false;
     els.detail.onclick = (e) => {
-      const act = e.target.closest('[data-act]')?.dataset.act;
-      if (act === 'say') speak(x.w);
+      const btn = e.target.closest('[data-act]');
+      const act = btn?.dataset.act;
+      if (act === 'char') speak(btn.dataset.c, 0.7);
+      else if (act === 'say') speak(x.w);
       else if (act === 'slow') speak(x.w, 0.5);
       else if (act === 'ex') speak(ex);
       else if (act === 'share') share(x);
+      else if (act === 'write') {
+        $('writing')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        animateAll();
+      } else if (act === 'anim') animateOne(+btn.dataset.i);
+      else if (act === 'quiz') quizOne(+btn.dataset.i);
     };
     els.detail.querySelector('.sharelink input').onclick = (e) => e.target.select();
+    mountWriters([...x.w].filter((c) => HAN_RE.test(c)));
+  }
+
+  /* ---------- Hướng dẫn viết (Hanzi Writer: thứ tự nét) ---------- */
+  const HAN_RE = /\p{Script=Han}/u;
+  let writers = [];
+
+  function renderWriting(w) {
+    const chars = [...w].filter((c) => HAN_RE.test(c));
+    if (!chars.length) return '';
+    return `<section class="writing" id="writing">
+      <h3>Hướng dẫn viết</h3>
+      <p class="writing-hint">Bấm ▶ để xem thứ tự từng nét. Bấm ✍️ rồi tự viết lên ô bằng chuột hoặc ngón tay; viết sai nét sẽ được nhắc.</p>
+      <div class="writers">
+        ${chars.map((c, i) => `<div class="wr">
+          <div class="wr-box" id="wr${i}" aria-label="Cách viết chữ ${esc(c)}"></div>
+          <p class="wr-info"><span class="han">${esc(c)}</span> · <span class="wr-count" id="wrc${i}">…</span></p>
+          <div class="wr-btns">
+            <button class="btn small" data-act="anim" data-i="${i}" title="Xem thứ tự nét">▶ Xem</button>
+            <button class="btn small" data-act="quiz" data-i="${i}" title="Tự tập viết">✍️ Tập viết</button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </section>`;
+  }
+
+  function mountWriters(chars) {
+    writers = [];
+    if (!chars.length) return;
+    if (!window.HanziWriter) {
+      $('writing').querySelector('.writers').innerHTML = '<p class="writing-hint">Không tải được thư viện hướng dẫn viết (cần kết nối mạng).</p>';
+      return;
+    }
+    const css = getComputedStyle(document.documentElement);
+    const red = css.getPropertyValue('--red').trim() || '#a3201b';
+    const gold = css.getPropertyValue('--gold').trim() || '#b8913f';
+    chars.forEach((c, i) => {
+      const w = HanziWriter.create(`wr${i}`, c, {
+        width: 150, height: 150, padding: 8,
+        strokeColor: red, radicalColor: gold, outlineColor: '#e6dac5',
+        highlightColor: gold, drawingColor: '#3a2a1f', drawingWidth: 6,
+        strokeAnimationSpeed: 1, delayBetweenStrokes: 250,
+        showHintAfterMisses: 2,
+        charDataLoader: (ch, onLoad, onErr) => {
+          fetch(`https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/${encodeURIComponent(ch)}.json`)
+            .then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then(onLoad, onErr);
+        },
+        onLoadCharDataSuccess: (data) => { const el = $(`wrc${i}`); if (el) el.textContent = `${data.strokes.length} nét`; },
+        onLoadCharDataError: () => { const el = $(`wrc${i}`); if (el) el.textContent = 'chưa có dữ liệu nét'; },
+      });
+      writers.push(w);
+    });
+  }
+
+  function animateOne(i) {
+    const w = writers[i];
+    if (!w) return Promise.resolve();
+    w.cancelQuiz?.();
+    return new Promise((res) => { w.hideCharacter(); w.animateCharacter({ onComplete: res }); });
+  }
+
+  async function animateAll() {
+    const list = writers;
+    for (let i = 0; i < list.length; i++) {
+      if (writers !== list) return; // đã chuyển sang từ khác
+      await animateOne(i);
+    }
+  }
+
+  function quizOne(i) {
+    const w = writers[i];
+    if (!w) return;
+    w.hideCharacter();
+    w.quiz({
+      onComplete: ({ totalMistakes }) => {
+        toast(totalMistakes ? `Xong! Sai ${totalMistakes} nét — thử lại nhé.` : 'Viết đúng hết các nét! 🎉');
+      },
+    });
   }
 
   /* ---------- Điều hướng ---------- */
