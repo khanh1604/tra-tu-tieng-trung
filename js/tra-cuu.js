@@ -95,6 +95,17 @@
     els.empty.hidden = items.length > 0;
   }
 
+  // Hình minh hoạ: ảnh (img) nếu có, không thì emoji
+  function renderIllus(x) {
+    const d = (window.ILLUS || {})[x.w];
+    if (!d) return '';
+    const pic = d.img
+      ? `<img src="${esc(d.img)}" alt="${esc(d.cap || x.nghia)}" loading="lazy">`
+      : `<div class="illus-em" role="img" aria-label="${esc(d.cap || x.nghia)}">${esc(d.em)}</div>`;
+    return `<figure class="illus${d.img ? ' has-img' : ''}">${pic}
+      ${d.cap ? `<figcaption>${esc(d.cap)}</figcaption>` : ''}</figure>`;
+  }
+
   // Mục "Ý nghĩa Hán tự": tách từng chữ trong từ
   function renderChars(w) {
     const CHARS = window.CHARS || {};
@@ -123,16 +134,19 @@
     const related = WORDS.filter((y) => y !== x && [...x.w].some((c) => y.w.includes(c)));
     const [ex, exPy, exVi] = x.vd;
     els.detail.innerHTML = `
-      <div class="head">
-        <h1 class="han big" lang="zh-CN">${esc(x.w)}</h1>
-        <div class="actions">
-          <button class="btn primary" data-act="say" title="Nghe đọc">🔊 Nghe</button>
-          <button class="btn" data-act="slow" title="Đọc chậm">🐢 Chậm</button>
-          <button class="btn" data-act="write" title="Xem cách viết">✍️ Cách viết</button>
-          <button class="btn" data-act="share" title="Chia sẻ link">🔗 Chia sẻ</button>
+      <div class="hero">
+        <div class="hero-main">
+          <h1 class="han big" lang="zh-CN">${esc(x.w)}</h1>
+          <p class="pinyin">${esc(x.py)}</p>
+          <div class="actions">
+            <button class="btn primary" data-act="say" title="Nghe đọc">🔊 Nghe</button>
+            <button class="btn" data-act="slow" title="Đọc chậm">🐢 Chậm</button>
+            <button class="btn" data-act="write" title="Xem cách viết">✍️ Cách viết</button>
+            <button class="btn" data-act="share" title="Chia sẻ link">🔗 Chia sẻ</button>
+          </div>
         </div>
+        ${renderIllus(x)}
       </div>
-      <p class="pinyin">${esc(x.py)}</p>
       <dl>
         <dt>Nghĩa</dt><dd class="meaning">${esc(x.nghia)}</dd>
         <dt>Hán Việt</dt><dd>${esc(x.hv)}</dd>

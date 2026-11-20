@@ -88,6 +88,34 @@ dt { color: var(--muted); }
 dd { margin: 0; }
 .meaning { font-weight: 600; font-size: 1.15rem; color: var(--red-deep); }
 
+/* Phần đầu: chữ + minh hoạ */
+.hero {
+  display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center;
+  margin-bottom: 16px;
+}
+.hero .pinyin { margin: 6px 0 14px; }
+.illus {
+  margin: 0; width: 200px; display: grid; gap: 6px; justify-items: center;
+}
+.illus img, .illus-em {
+  width: 200px; height: 200px; border-radius: 16px;
+  border: 1.5px solid var(--gold-soft);
+  box-shadow: 0 6px 18px rgba(120, 60, 20, .12);
+}
+.illus img { display: block; object-fit: cover; background: var(--cream); }
+.illus-em {
+  display: grid; place-items: center; text-align: center;
+  font-size: 4.2rem; line-height: 1.15; padding: 12px; word-break: break-all;
+  background: radial-gradient(circle at 50% 42%, #fffaf0 0%, #f6e7c8 70%, #eed8ae 100%);
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+}
+.illus figcaption { font-size: .85rem; color: var(--muted); text-align: center; line-height: 1.35; }
+@media (max-width: 560px) {
+  .hero { grid-template-columns: 1fr; }
+  .illus { width: 100%; }
+  .illus img, .illus-em { width: 100%; max-width: 260px; height: auto; aspect-ratio: 1; }
+}
+
 /* Ý nghĩa Hán tự */
 .hanzi { margin: 0 0 16px; }
 .hanzi h3 {
