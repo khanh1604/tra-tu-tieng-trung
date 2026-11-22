@@ -143,10 +143,12 @@
             <button class="btn" data-act="slow" title="Đọc chậm">🐢 Chậm</button>
             <button class="btn" data-act="write" title="Xem cách viết">✍️ Cách viết</button>
             <button class="btn" data-act="share" title="Chia sẻ link">🔗 Chia sẻ</button>
+            <button class="btn" data-act="qr" title="Mã QR của từ này">📱 Mã QR</button>
           </div>
         </div>
         ${renderIllus(x)}
       </div>
+      ${renderDaily(x)}
       <dl>
         <dt>Nghĩa</dt><dd class="meaning">${esc(x.nghia)}</dd>
         <dt>Hán Việt</dt><dd>${esc(x.hv)}</dd>
@@ -164,7 +166,11 @@
       ${related.length ? `<div class="related"><strong>Từ liên quan</strong>
         ${related.map((y) => `<a class="chip" href="${href(y.w)}" data-w="${esc(y.w)}"><span class="han">${esc(y.w)}</span> ${esc(y.py)}</a>`).join('')}
       </div>` : ''}
-      <div class="sharelink"><input readonly value="${esc(decodeURIComponent(linkFor(x.w)))}" aria-label="Link của từ"></div>`;
+      <div class="sharelink"><input readonly value="${esc(decodeURIComponent(linkFor(x.w)))}" aria-label="Link của từ"></div>
+      <section class="review" id="review">
+        <div class="review-head"><h3>Ôn tập</h3><span class="streak" id="streak"></span></div>
+        <div id="reviewBody"></div>
+      </section>`;
     els.detail.hidden = false;
     els.detail.onclick = (e) => {
       const btn = e.target.closest('[data-act]');
@@ -174,6 +180,11 @@
       else if (act === 'slow') speak(x.w, 0.5);
       else if (act === 'ex') speak(ex);
       else if (act === 'share') share(x);
+      else if (act === 'qr') showQr(x);
+      else if (act === 'daily') speak(btn.dataset.zh);
+      else if (act === 'answer') answer(btn);
+      else if (act === 'qlisten') speak(x.w);
+      else if (act === 'skip') go(nextWord(x.w));
       else if (act === 'write') {
         $('writing')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         animateAll();
@@ -182,7 +193,168 @@
     };
     els.detail.querySelector('.sharelink input').onclick = (e) => e.target.select();
     mountWriters([...x.w].filter((c) => HAN_RE.test(c)));
+    renderReview(x);
   }
+
+  /* ---------- Thông điệp hôm nay ---------- */
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+  const hashStr = (s) => [...s].reduce((h, c) => (h * 31 + c.codePointAt(0)) >>> 0, 7);
+  // Số thứ tự ngày theo giờ máy người xem → mỗi ngày đổi một thông điệp, các ngày liền nhau không trùng
+  const dayNumber = () => {
+    const d = new Date();
+    return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+  };
+
+  function autoMessages(x) {
+    const CHARS = window.CHARS || {};
+    const list = [
+      { zh: x.vd[0], py: x.vd[1], vi: `Hôm nay thử nói câu này nhé: "${x.vd[2]}"` },
+      { zh: x.w, py: x.py, vi: `Hôm nay hãy dùng từ ${x.w} (${x.nghia}) ít nhất một lần.` },
+      { zh: x.w, py: x.py, vi: `Viết từ ${x.w} 5 lần theo đúng thứ tự nét ở mục Hướng dẫn viết, nhớ lâu hơn hẳn!` },
+    ];
+    for (const c of new Set(x.w)) {
+      const d = CHARS[c];
+      if (d?.ct) list.push({ zh: c, py: d.py, vi: `Mẹo nhớ chữ ${c} (${d.hv}): ${d.ct}` });
+    }
+    return list;
+  }
+
+  function renderDaily(x) {
+    const list = (window.MESSAGES || {})[x.w] || autoMessages(x);
+    if (!list.length) return '';
+    const m = list[(dayNumber() + hashStr(x.w)) % list.length];
+    const today = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
+    return `<aside class="daily">
+      <p class="daily-head"><span>✨ Thông điệp hôm nay</span><span class="daily-date">${esc(today)}</span></p>
+      <p class="daily-zh han" lang="zh-CN">${esc(m.zh)}
+        <button class="btn small" data-act="daily" data-zh="${esc(m.zh)}" title="Nghe">🔊</button></p>
+      <p class="daily-py">${esc(m.py)}</p>
+      <p class="daily-vi">${esc(m.vi)}</p>
+    </aside>`;
+  }
+
+  /* ---------- Ôn tập: trả lời đúng → sang từ khác, sai → chọn lại ---------- */
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  let recent = [];
+
+  function nextWord(cur) {
+    recent = [cur, ...recent.filter((w) => w !== cur)].slice(0, Math.min(15, WORDS.length - 1));
+    const pool = WORDS.filter((y) => !recent.includes(y.w));
+    return (pool.length ? pool : WORDS.filter((y) => y.w !== cur))[Math.floor(Math.random() * (pool.length || WORDS.length - 1))].w;
+  }
+
+  const QTYPES = [
+    { key: 'nghia', ask: (x) => `<span class="han">${esc(x.w)}</span> nghĩa là gì?`, val: (y) => y.nghia },
+    { key: 'py', ask: (x) => `Pinyin của <span class="han">${esc(x.w)}</span> là gì?`, val: (y) => y.py },
+    { key: 'hv', ask: (x) => `Âm Hán Việt của <span class="han">${esc(x.w)}</span> là gì?`, val: (y) => y.hv },
+    { key: 'nguoc', ask: (x) => `Từ nào có nghĩa là “${esc(x.nghia)}”?`, val: (y) => y.w, han: true },
+    { key: 'nghe', ask: () => `Nghe rồi chọn từ đúng <button class="btn small" data-act="qlisten" title="Nghe lại">🔊 Nghe</button>`, val: (y) => y.w, han: true },
+  ];
+
+  function renderReview(x) {
+    const body = $('reviewBody');
+    if (!body) return;
+    const t = QTYPES[Math.floor(Math.random() * QTYPES.length)];
+    const right = t.val(x);
+    const others = shuffle(WORDS.filter((y) => y !== x).map(t.val).filter((v, i, a) => v !== right && a.indexOf(v) === i)).slice(0, 3);
+    const opts = shuffle([right, ...others]);
+    body.innerHTML = `
+      <p class="q">${t.ask(x)}</p>
+      <div class="opts">
+        ${opts.map((o) => `<button class="opt${t.han ? ' han' : ''}" data-act="answer" data-ok="${o === right ? 1 : 0}">${esc(o)}</button>`).join('')}
+      </div>
+      <p class="q-msg" id="qMsg" aria-live="polite"></p>
+      <button class="btn small q-skip" data-act="skip">Bỏ qua → từ khác</button>`;
+    body.dataset.word = x.w;
+    showStreak();
+  }
+
+  function showStreak() {
+    const s = store.get('streak', 0), best = store.get('best', 0);
+    const el = $('streak');
+    if (el) el.textContent = `🔥 ${s} câu đúng liên tiếp · Kỷ lục ${best}`;
+  }
+
+  function answer(btn) {
+    const body = $('reviewBody');
+    if (body.dataset.done) return;
+    const msg = $('qMsg');
+    if (btn.dataset.ok === '1') {
+      body.dataset.done = '1';
+      btn.classList.add('right');
+      body.querySelectorAll('.opt').forEach((b) => (b.disabled = true));
+      const s = store.get('streak', 0) + 1;
+      store.set('streak', s);
+      if (s > store.get('best', 0)) store.set('best', s);
+      showStreak();
+      const nxt = nextWord(body.dataset.word);
+      msg.className = 'q-msg ok';
+      msg.textContent = `Chính xác! 🎉 Sang từ tiếp theo: ${nxt}`;
+      setTimeout(() => { if ($('reviewBody')?.dataset.word === body.dataset.word) go(nxt); }, 1300);
+    } else {
+      btn.classList.add('wrong');
+      btn.disabled = true;
+      store.set('streak', 0);
+      showStreak();
+      msg.className = 'q-msg bad';
+      msg.textContent = 'Chưa đúng rồi, chọn lại nhé!';
+    }
+  }
+
+  /* ---------- Mã QR ---------- */
+  function qrCanvas(x, url, size = 640) {
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    const n = qr.getModuleCount();
+    const pad = Math.round(size * 0.08), cell = Math.floor((size - pad * 2) / n);
+    const qrSize = cell * n, top = pad, foot = Math.round(size * 0.2);
+    const c = document.createElement('canvas');
+    c.width = size; c.height = size + foot;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fffdf8'; g.fillRect(0, 0, c.width, c.height);
+    const left = Math.round((size - qrSize) / 2);
+    g.fillStyle = '#2b1d14';
+    for (let r = 0; r < n; r++) for (let col = 0; col < n; col++) {
+      if (qr.isDark(r, col)) g.fillRect(left + col * cell, top + r * cell, cell, cell);
+    }
+    // Chữ ở dưới mã
+    const serif = '"Noto Serif SC","STSong","SimSun",serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#a3201b';
+    g.font = `700 ${Math.round(foot * 0.5)}px ${serif}`;
+    g.fillText(x.w, size / 2, top + qrSize + foot * 0.42);
+    g.fillStyle = '#946d22';
+    g.font = `500 ${Math.round(foot * 0.2)}px system-ui, sans-serif`;
+    g.fillText(`${x.py} · ${x.nghia}`, size / 2, top + qrSize + foot * 0.82);
+    return c;
+  }
+
+  function showQr(x) {
+    if (!window.qrcode) return toast('Không tải được thư viện tạo mã QR (cần kết nối mạng).');
+    const url = linkFor(x.w);
+    const c = qrCanvas(x, url);
+    let dlg = $('qrDialog');
+    if (!dlg) {
+      dlg = document.createElement('dialog');
+      dlg.id = 'qrDialog';
+      dlg.className = 'qr-dialog';
+      document.body.appendChild(dlg);
+      dlg.addEventListener('click', (e) => { if (e.target === dlg || e.target.closest('[data-close]')) dlg.close(); });
+    }
+    dlg.innerHTML = `<div class="qr-inner">
+      <img alt="Mã QR của từ ${esc(x.w)}" src="${c.toDataURL('image/png')}">
+      <p class="qr-url">${esc(decodeURIComponent(url))}</p>
+      <div class="actions">
+        <a class="btn primary" download="qr-${esc(x.w)}.png" href="${c.toDataURL('image/png')}">⬇ Tải ảnh QR</a>
+        <button class="btn" data-close>Đóng</button>
+      </div></div>`;
+    dlg.showModal();
+  }
+  window.qrCanvasFor = (w, url) => qrCanvas(byWord.get(w), url); // dùng để xuất file QR
 
   /* ---------- Hướng dẫn viết (Hanzi Writer: thứ tự nét) ---------- */
   const HAN_RE = /\p{Script=Han}/u;
