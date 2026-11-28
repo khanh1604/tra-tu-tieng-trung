@@ -30,10 +30,21 @@ body {
 /* Thanh trên cùng: đỏ son, chữ vàng */
 .topbar {
   position: sticky; top: 0; z-index: 10;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 12px 16px;
   background: var(--red);
   border-bottom: 3px solid var(--gold);
+}
+.nav { display: flex; gap: 4px; flex-shrink: 0; }
+.nav a {
+  color: var(--gold-soft); text-decoration: none; font-size: .92rem; white-space: nowrap;
+  padding: 5px 12px; border-radius: 999px; border: 1px solid transparent;
+}
+.nav a:hover { border-color: rgba(227, 203, 143, .5); }
+.nav a[aria-current="page"] { background: rgba(255, 255, 255, .14); border-color: rgba(227, 203, 143, .6); color: #fff3d6; }
+@media (max-width: 480px) {
+  .brand { font-size: .95rem; }
+  .nav a { padding: 5px 9px; font-size: .85rem; }
 }
 .brand {
   color: var(--gold-soft); text-decoration: none;

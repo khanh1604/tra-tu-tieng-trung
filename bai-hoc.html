@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bài học: 一分钱也不带</title>
+  <meta name="description" content="Luyện nghe, nói, đọc, viết và dịch bài hội thoại 一分钱也不带 (Không mang theo một xu).">
+  <meta name="theme-color" content="#a3201b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="css/tra-cuu.css?v=6">
+  <link rel="stylesheet" href="css/bai-hoc.css?v=6">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./"><span class="seal">学</span> Tra Từ Tiếng Trung</a>
+    <nav class="nav">
+      <a href="./">Tra từ</a>
+      <a href="bai-hoc.html" aria-current="page">Bài học</a>
+    </nav>
+  </header>
+
+  <main class="lesson">
+    <div class="lesson-head">
+      <h1 class="han" id="ttl"></h1>
+      <p class="lesson-sub" id="sub"></p>
+      <nav class="lessons" id="lessons" aria-label="Chọn bài"></nav>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Kỹ năng">
+      <button role="tab" data-tab="vocab">📚 Từ mới</button>
+      <button role="tab" data-tab="read">📖 Đọc</button>
+      <button role="tab" data-tab="listen">🎧 Nghe</button>
+      <button role="tab" data-tab="speak">🗣️ Nói</button>
+      <button role="tab" data-tab="write">✍️ Viết</button>
+      <button role="tab" data-tab="trans">🔁 Dịch</button>
+      <button role="tab" data-tab="notebook">📒 Sổ từ <span class="badge" id="nbCount" hidden></span></button>
+    </nav>
+
+    <!-- Từ mới -->
+    <section class="pane" id="p-vocab" role="tabpanel">
+      <div class="toolbar">
+        <p class="hint"><span id="vocabN"></span> từ in đỏ trong bài. Bấm 🔊 để nghe. Bật “Che nghĩa” để tự kiểm tra, sau đó bấm vào thẻ để xem nghĩa.</p>
+        <label class="switch"><input type="checkbox" id="hideMean"> Che nghĩa</label>
+        <span class="progress" id="known"></span>
+      </div>
+      <div class="vgrid" id="vgrid"></div>
+      <h2 class="sec">Mẫu ngữ pháp trong bài</h2>
+      <div class="ggrid" id="ggrid"></div>
+    </section>
+
+    <!-- Đọc -->
+    <section class="pane" id="p-read" role="tabpanel" hidden>
+      <div class="toolbar">
+        <label class="switch"><input type="checkbox" id="showPy" checked> Pinyin</label>
+        <label class="switch"><input type="checkbox" id="showVi"> Dịch</label>
+        <p class="hint">Bấm vào chữ đỏ để xem nghĩa. Bấm 🔊 để nghe câu đó.</p>
+      </div>
+      <div class="dialog" id="readDlg"></div>
+    </section>
+
+    <!-- Nghe -->
+    <section class="pane" id="p-listen" role="tabpanel" hidden>
+      <div class="card player">
+        <div class="player-row">
+          <button class="btn primary" id="playAll">▶ Nghe cả bài</button>
+          <button class="btn" id="stopAll">■ Dừng</button>
+          <label>Tốc độ
+            <select id="rate">
+              <option value="0.6">Chậm</option>
+              <option value="0.8" selected>Vừa</option>
+              <option value="1">Bình thường</option>
+            </select>
+          </label>
+          <label class="switch"><input type="checkbox" id="blind"> Chỉ nghe (ẩn chữ)</label>
+        </div>
+        <p class="hint">Nghe lần đầu nên bật “Chỉ nghe” để luyện tai, sau đó tắt đi và nghe lại để đối chiếu.</p>
+      </div>
+      <div class="dialog compact" id="listenDlg"></div>
+
+      <h2 class="sec">Nghe và điền từ</h2>
+      <div class="card quiz" id="fill"></div>
+    </section>
+
+    <!-- Nói -->
+    <section class="pane" id="p-speak" role="tabpanel" hidden>
+      <div class="card">
+        <p class="hint" id="micNote"></p>
+        <div class="player-row" id="roleRow">
+          <span>Đóng vai:</span>
+          <button class="btn" data-role="A">Tôi là 朋友 (Bạn)</button>
+          <button class="btn" data-role="D">Tôi là 大卫 (David)</button>
+          <button class="btn" id="roleStop">■ Dừng</button>
+        </div>
+        <p class="hint" id="roleHint">Trong chế độ đóng vai, máy sẽ đọc lời của vai kia. Đến lượt bạn thì máy dừng lại để bạn nói.</p>
+      </div>
+      <div class="dialog" id="speakDlg"></div>
+    </section>
+
+    <!-- Viết -->
+    <section class="pane" id="p-write" role="tabpanel" hidden>
+      <p class="hint">Chọn một từ. ▶ để xem thứ tự nét, ✍️ để viết theo nét mờ, 🧠 để tự viết không có nét mờ.</p>
+      <div class="chips" id="wchips"></div>
+      <div class="card" id="wcard"></div>
+    </section>
+
+    <!-- Dịch -->
+    <section class="pane" id="p-trans" role="tabpanel" hidden>
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Chiều dịch">
+          <button class="on" data-dir="vz">Việt → Trung</button>
+          <button data-dir="zv">Trung → Việt</button>
+        </div>
+        <p class="hint" id="transHint"></p>
+      </div>
+      <div class="tlist" id="tlist"></div>
+    </section>
+
+    <!-- Sổ từ: những từ đã quên khi dịch -->
+    <section class="pane" id="p-notebook" role="tabpanel" hidden>
+      <div class="card nb-intro">
+        <p class="hint">Từ bạn quên khi dịch sẽ được lưu ở đây. Ở phần <b>Dịch</b>, bấm ☆ cạnh một từ, hoặc bấm “Lưu tất cả” sau khi kiểm tra. Bấm <b>Ôn tập</b> để nhìn nghĩa rồi nhớ lại chữ Hán: từ nào nhớ được 3 lần liền sẽ chuyển sang “Đã nhớ”.</p>
+        <div class="player-row">
+          <button class="btn primary" id="nbStart">🧠 Ôn tập</button>
+          <div class="seg" id="nbFilter" role="group" aria-label="Lọc">
+            <button class="on" data-f="due">Cần ôn</button>
+            <button data-f="done">Đã nhớ</button>
+            <button data-f="all">Tất cả</button>
+          </div>
+          <span class="progress" id="nbStat"></span>
+        </div>
+      </div>
+      <div class="card nb-review" id="nbReview" hidden></div>
+      <div class="nblist" id="nbList"></div>
+      <details class="card nb-add">
+        <summary>＋ Thêm từ khác vào sổ</summary>
+        <form class="addform" id="nbAdd">
+          <input name="w" placeholder="Chữ Hán" lang="zh" required>
+          <input name="py" placeholder="Pinyin (không bắt buộc)">
+          <input name="vi" placeholder="Nghĩa tiếng Việt">
+          <button class="btn primary small">Lưu</button>
+        </form>
+      </details>
+    </section>
+  </main>
+
+  <div class="pop" id="pop" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js"></script>
+  <!-- Mỗi bài một file dữ liệu. Thêm bài mới: tạo file giống vậy rồi thêm một dòng ở đây. -->
+  <script src="js/bai-hoc-data.js?v=2"></script>
+  <script src="js/bai-hoc-tui-tien.js?v=1"></script>
+  <script src="js/bai-hoc-danh-chu.js?v=1"></script>
+  <script src="js/bai-hoc-thuong-tam.js?v=1"></script>
+  <script src="js/bai-hoc.js?v=4"></script>
+</body>
+</html>
